@@ -150,7 +150,7 @@ for j=1:nrRuns
     
     nrTrials = length(conditions{j});
     for i=1:nrTrials
-        save(backupfile)   % backs the entire workspace up just in case we have to do a nasty abort
+        save(backupfile);   % backs the entire workspace up just in case we have to do a nasty abort
         trialnb = trialnb + 1;
         runnb(trialnb,1) = j; %#ok<*AGROW>
         
@@ -175,7 +175,7 @@ for j=1:nrRuns
 
         if Screenshot==1
             imageArray = Screen('GetImage', win); % GetImage call. Alter the rect argument to change the location of the screen shot
-            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_1DispValues.jpg']) % imwrite is a Matlab function
+            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_1DispValues.jpg']); % imwrite is a Matlab function
         end
         
         time.end = GetSecs;
@@ -196,7 +196,7 @@ for j=1:nrRuns
         disp_bars;
         disp_ticks;
         randomcursor = datasample(survivingChoices,1);
-        disp_cursor(randomcursor)
+        disp_cursor(randomcursor);
         
         keyCode = []; %#ok<NASGU>
         keyName=''; % empty initial value
@@ -210,10 +210,10 @@ for j=1:nrRuns
             imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_2DispBar.jpg']) % imwrite is a Matlab function
         end
         
-        [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'DispBarCursor', time);
+        pos = find(survivingChoices==randomcursor);
+        [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', ['DispCursorOn' num2str(survivingChoices(pos))], time);
         
         %% Selection
-        pos = find(survivingChoices==randomcursor);
         RestrictKeysForKbCheck([]);
         while(~strcmp(keyName,'space')) % continues until current keyName is space
             [keyTime, keyCode]=KbWait([],2);
@@ -223,29 +223,30 @@ for j=1:nrRuns
                 case 'LeftArrow'
                     if pos > 1
                         pos = pos - 1;
+
+                        disp_green_value;
+                        disp_bars;
+                        disp_ticks;
+                        disp_cursor(survivingChoices(pos));
+                        time.start = GetSecs;
+                        Screen('Flip',win);
+                        time.end = GetSecs;
+                        [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', ['CursorOn' num2str(survivingChoices(pos))], time);
                     end
                     
-                    disp_green_value;
-                    disp_bars;
-                    disp_ticks;
-                    disp_cursor(survivingChoices(pos));
-                    time.start = GetSecs;
-                    Screen('Flip',win);
-                    time.end = GetSecs;
-                    [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorLeft', time);
-            
                 case 'RightArrow'
                     if pos < length(survivingChoices)
                         pos = pos + 1;
-                    end
-                    disp_green_value;
-                    disp_bars;
-                    disp_ticks;
-                    disp_cursor(survivingChoices(pos));
-                    time.start = GetSecs;
-                    Screen('Flip',win);
-                    time.end = GetSecs;
-                    [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorRight', time);
+                        
+                        disp_green_value;
+                        disp_bars;
+                        disp_ticks;
+                        disp_cursor(survivingChoices(pos));
+                        time.start = GetSecs;
+                        Screen('Flip',win);
+                        time.end = GetSecs;
+                        [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', ['CursorOn' num2str(survivingChoices(pos))], time);
+                    end  
             end
         end
         
@@ -263,7 +264,7 @@ for j=1:nrRuns
             
         if Screenshot==1
             imageArray = Screen('GetImage', win); % GetImage call. Alter the rect argument to change the location of the screen shot
-            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_3DispChoiceSelect.jpg']) % imwrite is a Matlab function
+            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_3DispChoiceSelect.jpg']); % imwrite is a Matlab function
         end
         
         time.end = GetSecs;
@@ -299,14 +300,14 @@ for j=1:nrRuns
             Screen('TextSize',win, 22);
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+Sub_ch*width_coeff y_coord2]);
             Screen('FillRect', win, white, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+(greenValueSubj)*width_coeff y_coord2]);
-            disp_cursor_select(Sub_ch)
+            disp_cursor_select(Sub_ch);
         elseif (conditions{j}(i) == 1) && (humanWin == 0) %BASE
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
             DrawFormattedText(win,'Hai perso!','center',450,white);
             Screen('TextSize',win, 22);
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
-            disp_cursor_select(Sub_ch)
+            disp_cursor_select(Sub_ch);
         elseif (conditions{j}(i) == 2) && (humanWin == 1) %SECONDA PUNTATA
             DrawFormattedText(win,num2str(compChoice),1110,900,white);
             Screen('TextSize',win, 48);
@@ -315,7 +316,7 @@ for j=1:nrRuns
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+compChoice*width_coeff y_coord2]);
             Screen('FillRect', win, white, [start_coord+compChoice*width_coeff y_coord1 start_coord+Sub_ch*width_coeff y_coord2]);
             Screen('FillRect', win, white, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
-            disp_cursor_select(Sub_ch)
+            disp_cursor_select(Sub_ch);
             Screen('FillRect', win, grey, [start_coord+compChoice*width_coeff-7 y_coord1-10 start_coord+compChoice*width_coeff+7 y_coord2+10]);
             Screen('FrameRect', win, black, [start_coord+compChoice*width_coeff-8 y_coord1-16 start_coord+compChoice*width_coeff+8 y_coord2+16]);
         elseif (conditions{j}(i) == 2 && humanWin == 0) %SECONDA PUNTATA
@@ -324,7 +325,7 @@ for j=1:nrRuns
             DrawFormattedText(win,'Hai perso!','center',450,white); 
             Screen('TextSize',win, 22);
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
-            disp_cursor_select(Sub_ch)
+            disp_cursor_select(Sub_ch);
         elseif (conditions{j}(i) == 3 && humanWin == 1) %PUNTATA VINCENTE
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
@@ -332,7 +333,7 @@ for j=1:nrRuns
             Screen('TextSize',win, 22);
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+Sub_ch*width_coeff y_coord2]);
             Screen('FillRect', win, white, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+(greenValueSubj)*width_coeff y_coord2]);
-            disp_cursor_select(Sub_ch)
+            disp_cursor_select(Sub_ch);
         elseif (conditions{j}(i) == 3 && humanWin == 0) %PUNTATA VINCENTE
             DrawFormattedText(win,num2str(compChoice),1110,900,white);
             Screen('TextSize',win, 48);
@@ -342,11 +343,11 @@ for j=1:nrRuns
                 Screen('FillRect', win, white, [start_coord y_coord1 start_coord+Sub_ch*width_coeff y_coord2]);
                 Screen('FillRect', win, white, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+compChoice*width_coeff y_coord2]);
                 Screen('FillRect', win, white, [start_coord+compChoice*width_coeff y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
-                disp_cursor_select(Sub_ch)
+                disp_cursor_select(Sub_ch);
                 Screen('FillRect', win, grey, [start_coord+compChoice*width_coeff-7 y_coord1-10 start_coord+compChoice*width_coeff+7 y_coord2+10]);
             elseif greenValueSubj<=compChoice
                 Screen('FillRect', win, white, [start_coord y_coord1 start_coord+compChoice(end)*width_coeff y_coord2]);
-                disp_cursor(Sub_ch)
+                disp_cursor(Sub_ch);
                 Screen('FillRect', win, grey, [start_coord+compChoice*width_coeff-7 y_coord1-10 start_coord+compChoice*width_coeff+7 y_coord2+10]);
                 Screen('FrameRect', win, black, [start_coord+compChoice*width_coeff-8 y_coord1-16 start_coord+compChoice*width_coeff+8 y_coord2+16]);
             end
@@ -356,7 +357,7 @@ for j=1:nrRuns
         
         if Screenshot==1
             imageArray = Screen('GetImage', win); % GetImage call. Alter the rect argument to change the location of the screen shot
-            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_Feedback.jpg']) % imwrite is a Matlab function
+            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_Feedback.jpg']); % imwrite is a Matlab function
         end
         
         
@@ -483,5 +484,9 @@ save(resultname, 'data', 'Events');
         Screen('flip',win);
 
     end
+
 Screen('CloseAll');
+if strcmp(Cfg.run_mode,'mriScanner')
+    CloseSerialPort(SerPort);
+end
 end
