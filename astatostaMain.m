@@ -288,6 +288,7 @@ for j=1:nrRuns
                    end
                end
             end
+            KbQueueRelease;
             
             case {'mriScanner', 'mriSimulator'}
                 sbutton = 0;
