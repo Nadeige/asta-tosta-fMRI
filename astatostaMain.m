@@ -14,6 +14,8 @@ Cfg = Config(iSubject);
 tNoDecision = Cfg.tNoDecision; % feedback time
 tFeedback =Cfg.tFeedback; % feedback time
 tVal = Cfg.tVal;
+MaxDecisionTime = Cfg.MaxDecisionTime;
+MaxButtonTime = Cfg.MaxButtonTime;
 
 % Screenshots
 if Cfg.Screenshot==1 && ~isdir('Screenshots')
@@ -34,7 +36,7 @@ Screen('Preference', 'VBLTimestampingMode', 3); %Add this to avoid timestamping 
 white = [255 255 255];
 black = [0 0 0];
 green = [0 255 0];
-grey = [150 150 150];
+grey = [180 180 180];
 color1 = Cfg.color1;
 color2 = Cfg.color2;
 color3 = Cfg.color3;
@@ -47,6 +49,7 @@ width_coeff = 60;
 start_coord = 400;
 y_coord1 = 640;
 y_coord2 = 690;
+wo = 6; lo = 16;
 
 %Keyboard parameters
 enter = KbName('return'); % Enter
@@ -198,11 +201,14 @@ for j=1:nrRuns
         
         %% Cursor
         %random placement of cursor
+        randomcursor = datasample(survivingChoices,1);
+        color = white;
+        w = 6; l = 16;
+        
         disp_green_value;
         disp_bars;
         disp_ticks;
-        randomcursor = datasample(survivingChoices,1);
-        disp_cursor(randomcursor)
+        disp_cursor(randomcursor, color, w, l)
         
         keyCode = []; %#ok<NASGU>
         keyName=''; % empty initial value
@@ -219,54 +225,76 @@ for j=1:nrRuns
         
         %% Selection
         pos = find(survivingChoices==randomcursor);
+        toolate = 0;
+        info_choice = '';
+        displate = 0;
+        firstbutton = 0;
         
         switch Cfg.run_mode
             case 'behav'
             RestrictKeysForKbCheck([]);
-            while(~strcmp(keyName,'space')) % continues until current keyName is space
-                [keyTime, keyCode]=KbWait([],2);
-                keyName{1} = KbName(keyCode);
-                [Events, nbevents] = LogEvents(Events, nbevents,  'Button Press', keyName, keyTime);
-                switch keyName{1}
-                    case 'ESCAPE'
-                        abort = 1;
-                        break
-                    case 'LeftArrow'
-                        if pos > 1
-                            pos = pos - 1;
-                        end
-
-                        disp_green_value;
-                        disp_bars;
-                        disp_ticks;
-                        disp_cursor(survivingChoices(pos));
-                        time.start = GetSecs;
-                        Screen('Flip',win);
-                        time.end = GetSecs;
-                        [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorLeft', time);
-
-                    case 'RightArrow'
-                        if pos < length(survivingChoices)
-                            pos = pos + 1;
-                        end
-                        disp_green_value;
-                        disp_bars;
-                        disp_ticks;
-                        disp_cursor(survivingChoices(pos));
-                        time.start = GetSecs;
-                        Screen('Flip',win);
-                        time.end = GetSecs;
-                        [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorRight', time);
-                end
+            KbQueueCreate;
+            KbQueueStart;
+            while(~strcmp(keyName,'space') && ~toolate) % continues until current keyName is space
+               if Time_start + MaxDecisionTime -2 < GetSecs
+                    % disp warning
+                    if ~displate
+                    color = color1;
+                    disp_barswithcursor
+                    displate = 1;
+                    end
+                    if Time_start + MaxDecisionTime < GetSecs
+                        toolate = 1;
+                        info_choice = 'missed';
+                    end
+               end
+               if firstbutton
+                   if firstbuttonT + MaxButtonTime < GetSecs
+                       toolate = 1;
+                       info_choice = 'missed';
+                   end
+               end
+               [pressed, firstPress] = KbQueueCheck; % Collect keyboard events since KbQueueStart was invoked 
+               if pressed
+                   pressedCodes=find(firstPress);
+                   keyName{1} = KbName(pressedCodes(1));
+                   keyTime = firstPress(pressedCodes(1));
+                   %                 [keyTime, keyCode]=KbWait([],2,0.2);
+                   %                 keyName{1} = KbName(keyCode);
+                   [Events, nbevents] = LogEvents(Events, nbevents,  'Button Press', keyName, keyTime);
+                   if ~firstbutton
+                       color = color1;
+                       firstbuttonT = keyTime;
+                       firstbutton = 1;
+                   end
+                       
+                   switch keyName{1}
+                       case 'ESCAPE'
+                           abort = 1;
+                           break
+                       case 'LeftArrow'
+                           if pos > 1
+                               pos = pos - 1;
+                           end
+                           disp_barswithcursor
+                           [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorLeft', time);
+                           
+                       case 'RightArrow'
+                           if pos < length(survivingChoices)
+                               pos = pos + 1;
+                           end
+                           disp_barswithcursor
+                           [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorRight', time);
+                   end
+               end
             end
-            info_choice = '';
+            
             case {'mriScanner', 'mriSimulator'}
                 sbutton = 0;
                 k = 0;
                 keyName = {};
                 secs = [];
                 
-                validated = 0;
                 while ~validated % wait for press
                     if (SerPort.BytesAvailable)
                         sbutton = str2num(fscanf(SerPort,'%c',1));  % read serial buffer
@@ -284,47 +312,48 @@ for j=1:nrRuns
                                 pos = pos + 1;
                             end
                             keyName{k} = {'ButtonRight'};
-                            Picname = 'MoveCursorRight';
-                            
-                            disp_green_value;
-                            disp_bars;
-                            disp_ticks;
-                            disp_cursor(survivingChoices(pos));
-
-                            time.start = GetSecs;
-                            Screen('Flip',win);
-                            time.end = GetSecs;
-                            [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', Picname, time);
-                        
+                            disp_barswithcursor
+                            [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorRight', time);
+                            if ~firstbutton
+                                color = color1;
+                                firstbuttonT = keyTime;
+                                firstbutton = 1;
+                            end
                         elseif sbutton == keyLeft;
                             if pos > 1
                                 pos = pos - 1;
                             end
                             keyName{k} = {'ButtonLeft'};
-                            Picname = 'MoveCursorLeft';
-                            
-                            disp_green_value;
-                            disp_bars;
-                            disp_ticks;
-                            disp_cursor(survivingChoices(pos));
-
-                            time.start = GetSecs;
-                            Screen('Flip',win);
-                            time.end = GetSecs;
-                            [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', Picname, time);
-                            
+                            disp_barswithcursor
+                            [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorLeft', time);
+                            if ~firstbutton
+                                color = color1;
+                                firstbuttonT = keyTime;
+                                firstbutton = 1;
+                            end
                         elseif  any(sbutton == unused)
                             keyName{1} = sbutton;
                             
                         end
                     end
-                    if Time_start + 8 < GetSecs
+                    if Time_start + MaxDecisionTime - 2 < GetSecs
                         % disp warning
-                        if Time_start + 10 < GetSecs
-                            validated = 1;
+                        if ~displate
+                            color = color1;
+                            disp_barswithcursor
+                            displate = 1;
+                        end
+                        if Time_start + MaxDecisionTime < GetSecs
+                            toolate = 1;
                             info_choice = 'missed';
                         end
                     end
+                   if firstbutton
+                       if firstbuttonT + MaxButtonTime < GetSecs
+                           toolate = 1;
+                           info_choice = 'missed';
+                       end
+                   end
                 end
         end
         
@@ -334,11 +363,14 @@ for j=1:nrRuns
         
         Time_end = GetSecs;
         Choice_RT(trialnb,1) = Time_end - Time_start;
-            
+        if ~toolate
+            color = white;
+            w = 8; l = 18;
+        end
         disp_green_value;
         disp_bars;
         disp_ticks;
-        disp_cursor_select(survivingChoices(pos));
+        disp_cursor(survivingChoices(pos), color, w, l);
         time.start = GetSecs;
         Screen('Flip',win);
         Jittime = Cfg.Val_min + rand*(Cfg.Val_max - Cfg.Val_min);
@@ -357,7 +389,10 @@ for j=1:nrRuns
         Sub_ch = survivingChoices(pos);
         
         %% determine who won
-        if compChoice > Sub_ch
+        if toolate
+            humanWin = 0;
+            payoff(trialnb,1) = 0;
+        elseif compChoice > Sub_ch
             humanWin = 0;
             payoff(trialnb,1) = 0;
         elseif compChoice < Sub_ch
@@ -371,72 +406,76 @@ for j=1:nrRuns
         %% Show post-choice info screen
         disp_ticks;
         DrawFormattedText(win, num2str(greenValueSubj), start_coord + greenValueSubj*width_coeff-10, y_coord2 + 50, white);
-        
         Screen('TextSize',win, 48);
         DrawFormattedText(win,condname{conditions{j}(i)},'center',200,white);
         Screen('TextSize',win, 22);
         DrawFormattedText(win,condmsg{conditions{j}(i)},'center',900,white);
-        if (conditions{j}(i) == 1) && (humanWin == 1) %BASE win
+        if toolate
+            Screen('TextSize',win, 48);
+            DrawFormattedText(win,'Hai perso!','center',450,white);
+            
+            Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
+            disp_cursor(Sub_ch, color, w, l)
+        elseif (conditions{j}(i) == 1) && (humanWin == 1) %BASE win
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
             DrawFormattedText(win,'Hai vinto!','center',450,white);
-            Screen('TextSize',win, 22);
+            
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+Sub_ch*width_coeff y_coord2]);
             Screen('FillRect', win, color2, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+(greenValueSubj)*width_coeff y_coord2]);
-            disp_cursor_select(Sub_ch)
+            disp_cursor(Sub_ch, color, w, l)
         elseif (conditions{j}(i) == 1) && (humanWin == 0) %BASE loss
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
             DrawFormattedText(win,'Hai perso!','center',450,white);
-            Screen('TextSize',win, 22);
+            
             Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
-            disp_cursor_select(Sub_ch)
+            disp_cursor(Sub_ch, color, w, l)
         elseif (conditions{j}(i) == 2) && (humanWin == 1) %SECONDA PUNTATA win
             DrawFormattedText(win,num2str(compChoice),1110,900,white);
             Screen('TextSize',win, 48);
             DrawFormattedText(win,'Hai vinto!','center',450,white);
-            Screen('TextSize',win, 22);
+            
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+compChoice*width_coeff y_coord2]);
             Screen('FillRect', win, color2, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+(greenValueSubj)*width_coeff y_coord2]); %payoff
             Screen('FillRect', win, color3, [start_coord+compChoice*width_coeff y_coord1 start_coord+Sub_ch*width_coeff y_coord2]) %regret          
-            disp_cursor_select(Sub_ch)
-            Screen('FillRect', win, grey, [start_coord+compChoice*width_coeff-7 y_coord1-10 start_coord+compChoice*width_coeff+7 y_coord2+10]);
-            Screen('FrameRect', win, black, [start_coord+compChoice*width_coeff-8 y_coord1-16 start_coord+compChoice*width_coeff+8 y_coord2+16]);
+            disp_cursor(Sub_ch, color, w, l)
+            disp_cursor(compChoice, grey, wo, lo)
         elseif (conditions{j}(i) == 2 && humanWin == 0) %SECONDA PUNTATA loss
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
             DrawFormattedText(win,'Hai perso!','center',450,white); 
-            Screen('TextSize',win, 22);
+            
             Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
-            disp_cursor_select(Sub_ch)
+            disp_cursor(Sub_ch, color, w, l)
         elseif (conditions{j}(i) == 3 && humanWin == 1) %PUNTATA VINCENTE win
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
             DrawFormattedText(win,'Hai vinto!','center',450,white);
-            Screen('TextSize',win, 22);
+            
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+Sub_ch*width_coeff y_coord2]);
             Screen('FillRect', win, color2, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+(greenValueSubj)*width_coeff y_coord2]);
-            disp_cursor_select(Sub_ch)
+            disp_cursor(Sub_ch, color, w, l)
         elseif (conditions{j}(i) == 3 && humanWin == 0) %PUNTATA VINCENTE loss
             DrawFormattedText(win,num2str(compChoice),1110,900,white);
             Screen('TextSize',win, 48);
             DrawFormattedText(win,'Hai perso!','center',450,white);
-            Screen('TextSize',win, 22);
+            
             if greenValueSubj>compChoice
                 Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+Sub_ch*width_coeff y_coord2]); %loss
                 Screen('FillRect', win, color1, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+compChoice*width_coeff y_coord2]); %loss
                 Screen('FillRect', win, color3, [start_coord+compChoice*width_coeff y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);%regret 
-                disp_cursor_select(Sub_ch)
+                disp_cursor(Sub_ch, color, w, l)
                 Screen('FillRect', win, grey, [start_coord+compChoice*width_coeff-7 y_coord1-10 start_coord+compChoice*width_coeff+7 y_coord2+10]);
             elseif greenValueSubj<=compChoice
                 Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+compChoice(end)*width_coeff y_coord2]);
-                disp_cursor(Sub_ch)
-                Screen('FillRect', win, grey, [start_coord+compChoice*width_coeff-7 y_coord1-10 start_coord+compChoice*width_coeff+7 y_coord2+10]);
-                Screen('FrameRect', win, black, [start_coord+compChoice*width_coeff-8 y_coord1-16 start_coord+compChoice*width_coeff+8 y_coord2+16]);
+                disp_cursor(Sub_ch, color, w, l)
+                disp_cursor(compChoice, grey, wo, lo)
             end
         end
         time.start = GetSecs;
         Screen('Flip',win);
+        Screen('TextSize',win, 22);
         
         if Cfg.Screenshot==1
             imageArray = Screen('GetImage', win); % GetImage call. Alter the rect argument to change the location of the screen shot
@@ -449,12 +488,14 @@ for j=1:nrRuns
         [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'Feedback', time, tFeedback);
         [Events, nbevents] = LogEvents(Events, nbevents,  'Button Press', KeyNames, Keytimes); 
         
+        %% store info
         s_value(trialnb,1) = greenValueSubj;
         s_fulloptions{trialnb} = row;
         s_options{trialnb} = survivingChoices;
         c_choice(trialnb,1) = compChoice;
         s_win(trialnb,1) = humanWin;
         
+        %% show fixation coss
         Jittime = Cfg.Fix_min + rand*(Cfg.Fix_max - Cfg.Fix_min); 
         time.start = GetSecs;
         Screen('FillRect', win, white, vCrossRect);
@@ -585,21 +626,26 @@ Screen('CloseAll');
         end
     end
 
-    function disp_cursor(horiz_pos)
-        Screen('FillRect', win, white, [start_coord+horiz_pos*width_coeff-6 y_coord1-16 start_coord+horiz_pos*width_coeff+6 y_coord2+16]);
-        Screen('FrameRect', win, black, [start_coord+horiz_pos*width_coeff-7 y_coord1-16 start_coord+horiz_pos*width_coeff+7 y_coord2+16]);
+    function disp_cursor(horiz_pos, col, w, l)
+        Screen('FillRect', win, col, [start_coord+horiz_pos*width_coeff-w y_coord1-l start_coord+horiz_pos*width_coeff+w y_coord2+l]);
+        Screen('FrameRect', win, black, [start_coord+horiz_pos*width_coeff-w-1 y_coord1-l-1 start_coord+horiz_pos*width_coeff+w+1 y_coord2+l+1]);
     end
-
-    function disp_cursor_select(horiz_pos)
-        Screen('FillRect', win, white, [start_coord+horiz_pos*width_coeff-7 y_coord1-16 start_coord+horiz_pos*width_coeff+7 y_coord2+16]);
-        Screen('FrameRect', win, black, [start_coord+horiz_pos*width_coeff-8 y_coord1-16 start_coord+horiz_pos*width_coeff+8 y_coord2+16]);
+    
+    function disp_barswithcursor
+        disp_green_value;
+        disp_bars;
+        disp_ticks;
+        disp_cursor(survivingChoices(pos), color, w, l);
+        time.start = GetSecs;
+        Screen('Flip',win);
+        time.end = GetSecs;
     end
 
     function disp_earning
         final_payoff = [];
         A = cell2mat(conditions);
-        for k=1:nrTrials
-            idx = find(A==k+1);
+        for t=1:nrTrials
+            idx = find(A==t+1);
             picktrial = randsample(length(idx),1);
             final_payoff = [final_payoff; payoff(idx(picktrial))];
         end

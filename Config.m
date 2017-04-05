@@ -36,13 +36,13 @@ end
 
 %% colors
 if mod(subnb, 2)    % if subject number is odd
-    Cfg.color1 = [153 0 56]; % purple
-    Cfg.color2 = [255 215 0];  % yellow
-    Cfg.color3 = [128 128 128]; % lightgrey
+    Cfg.color1 = [153 0 56]; % loss: purple
+    Cfg.color2 = [255 215 0];  % payoff: yellow
+    Cfg.color3 = [100 100 100]; % regret: lightgrey
 else                % if subject number is even
-    Cfg.color1 = [128 128 128]; % lightgrey 
-    Cfg.color2 = [153 0 56]; % purple
-    Cfg.color3 = [255 215 0];  % yellow
+    Cfg.color1 = [100 100 100]; % loss: lightgrey 
+    Cfg.color2 = [153 0 56]; % payoff: purple
+    Cfg.color3 = [255 215 0];  % regret: yellow
 end
 
 % % Start PsychToolBox
@@ -56,6 +56,9 @@ end
 % end
 
 %% timing parameters
+Cfg.MaxDecisionTime = 10;
+Cfg.MaxButtonTime = 2;
+
 % for fMRI current order is fixation cross, validation,
 % symbols_other, show owm choice
 Cfg.Val_min = 2;
