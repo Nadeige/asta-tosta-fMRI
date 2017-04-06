@@ -3,6 +3,7 @@
 
 function astatostaMain
 
+clear all
 global taskTimeStamp
 
 %% Set things up
@@ -36,7 +37,7 @@ Screen('Preference', 'VBLTimestampingMode', 3); %Add this to avoid timestamping 
 white = [255 255 255];
 black = [0 0 0];
 green = [0 255 0];
-grey = [180 180 180];
+grey = [120 120 120];
 color1 = Cfg.color1;
 color2 = Cfg.color2;
 color3 = Cfg.color3;
@@ -158,7 +159,7 @@ for j=1:nrRuns
     nrTrials = length(conditions{j});
     for i=1:nrTrials
         abort = 0;
-        save(backupfile)   % backs the entire workspace up just in case we have to do a nasty abort
+        save(backupfile);   % backs the entire workspace up just in case we have to do a nasty abort
         trialnb = trialnb + 1;
         runnb(trialnb,1) = j; %#ok<*AGROW>
         
@@ -179,12 +180,12 @@ for j=1:nrRuns
         
         time.start = GetSecs;
         Screen('Flip',win);
-        [KeyNames, Keytimes] = WaitSecsKeylog(tVal, Cfg.run_mode, time.start, SerPort);
 
         if Cfg.Screenshot==1
             imageArray = Screen('GetImage', win); % GetImage call. Alter the rect argument to change the location of the screen shot
             imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_1DispValues.jpg']) % imwrite is a Matlab function
         end
+        [KeyNames, Keytimes] = WaitSecsKeylog(tVal, Cfg.run_mode, time.start, SerPort);
         
         time.end = GetSecs;
         [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'DispValues', time, tVal);
@@ -194,6 +195,10 @@ for j=1:nrRuns
         disp_ticks;
         time.start = GetSecs;
         Screen('Flip',win);
+        if Cfg.Screenshot==1
+            imageArray = Screen('GetImage', win); % GetImage call. Alter the rect argument to change the location of the screen shot
+            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_2DispBar.jpg']) % imwrite is a Matlab function
+        end
         [KeyNames, Keytimes] = WaitSecsKeylog(tNoDecision, Cfg.run_mode, time.start, SerPort);
         time.end = GetSecs;
         [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'DispBarNoCursor', time, tNoDecision);
@@ -203,12 +208,13 @@ for j=1:nrRuns
         %random placement of cursor
         randomcursor = datasample(survivingChoices,1);
         color = white;
+        colorf = black;
         w = 6; l = 16;
         
         disp_green_value;
         disp_bars;
         disp_ticks;
-        disp_cursor(randomcursor, color, w, l)
+        disp_cursor(randomcursor, color, colorf, w, l)
         
         keyCode = []; %#ok<NASGU>
         keyName=''; % empty initial value
@@ -218,7 +224,7 @@ for j=1:nrRuns
         
         if Cfg.Screenshot==1
             imageArray = Screen('GetImage', win); % GetImage call. Alter the rect argument to change the location of the screen shot
-            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_2DispBar.jpg']) % imwrite is a Matlab function
+            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_3DispBarCursor.jpg']) % imwrite is a Matlab function
         end
         time.end = GetSecs;
         [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'DispBarCursor', time);
@@ -240,7 +246,7 @@ for j=1:nrRuns
                     % disp warning
                     if ~displate
                     color = color1;
-                    disp_barswithcursor
+                    disp_barswithcursor;
                     displate = 1;
                     end
                     if Time_start + MaxDecisionTime < GetSecs
@@ -263,7 +269,7 @@ for j=1:nrRuns
                    %                 keyName{1} = KbName(keyCode);
                    [Events, nbevents] = LogEvents(Events, nbevents,  'Button Press', keyName, keyTime);
                    if ~firstbutton
-                       color = color1;
+                       colorf = color1;
                        firstbuttonT = keyTime;
                        firstbutton = 1;
                    end
@@ -276,14 +282,14 @@ for j=1:nrRuns
                            if pos > 1
                                pos = pos - 1;
                            end
-                           disp_barswithcursor
+                           disp_barswithcursor;
                            [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorLeft', time);
                            
                        case 'RightArrow'
                            if pos < length(survivingChoices)
                                pos = pos + 1;
                            end
-                           disp_barswithcursor
+                           disp_barswithcursor;
                            [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorRight', time);
                    end
                end
@@ -313,10 +319,10 @@ for j=1:nrRuns
                                 pos = pos + 1;
                             end
                             keyName{k} = {'ButtonRight'};
-                            disp_barswithcursor
+                            disp_barswithcursor;
                             [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorRight', time);
                             if ~firstbutton
-                                color = color1;
+                                colorf = color1;
                                 firstbuttonT = keyTime;
                                 firstbutton = 1;
                             end
@@ -325,10 +331,10 @@ for j=1:nrRuns
                                 pos = pos - 1;
                             end
                             keyName{k} = {'ButtonLeft'};
-                            disp_barswithcursor
+                            disp_barswithcursor;
                             [Events, nbevents] = LogEvents(Events, nbevents,  'Picture', 'MoveCursorLeft', time);
                             if ~firstbutton
-                                color = color1;
+                                colorf = color1;
                                 firstbuttonT = keyTime;
                                 firstbutton = 1;
                             end
@@ -341,7 +347,7 @@ for j=1:nrRuns
                         % disp warning
                         if ~displate
                             color = color1;
-                            disp_barswithcursor
+                            disp_barswithcursor;
                             displate = 1;
                         end
                         if Time_start + MaxDecisionTime < GetSecs
@@ -367,11 +373,13 @@ for j=1:nrRuns
         if ~toolate
             color = white;
             w = 8; l = 18;
+        else
+            color = color1;
         end
         disp_green_value;
         disp_bars;
         disp_ticks;
-        disp_cursor(survivingChoices(pos), color, w, l);
+        disp_cursor(survivingChoices(pos), color, colorf, w, l);
         time.start = GetSecs;
         Screen('Flip',win);
         Jittime = Cfg.Val_min + rand*(Cfg.Val_max - Cfg.Val_min);
@@ -379,7 +387,7 @@ for j=1:nrRuns
             
         if Cfg.Screenshot==1
             imageArray = Screen('GetImage', win); % GetImage call. Alter the rect argument to change the location of the screen shot
-            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_3DispChoiceSelect.jpg']) % imwrite is a Matlab function
+            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_4DispChoiceSelect.jpg']) % imwrite is a Matlab function
         end
         
         time.end = GetSecs;
@@ -416,7 +424,7 @@ for j=1:nrRuns
             DrawFormattedText(win,'Hai perso!','center',450,white);
             
             Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
-            disp_cursor(Sub_ch, color, w, l)
+            disp_cursor(Sub_ch, color, colorf, w, l)
         elseif (conditions{j}(i) == 1) && (humanWin == 1) %BASE win
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
@@ -424,14 +432,14 @@ for j=1:nrRuns
             
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+Sub_ch*width_coeff y_coord2]);
             Screen('FillRect', win, color2, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+(greenValueSubj)*width_coeff y_coord2]);
-            disp_cursor(Sub_ch, color, w, l)
+            disp_cursor(Sub_ch, color, colorf, w, l)
         elseif (conditions{j}(i) == 1) && (humanWin == 0) %BASE loss
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
             DrawFormattedText(win,'Hai perso!','center',450,white);
             
             Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
-            disp_cursor(Sub_ch, color, w, l)
+            disp_cursor(Sub_ch, color, colorf, w, l)
         elseif (conditions{j}(i) == 2) && (humanWin == 1) %SECONDA PUNTATA win
             DrawFormattedText(win,num2str(compChoice),1110,900,white);
             Screen('TextSize',win, 48);
@@ -440,15 +448,15 @@ for j=1:nrRuns
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+compChoice*width_coeff y_coord2]);
             Screen('FillRect', win, color2, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+(greenValueSubj)*width_coeff y_coord2]); %payoff
             Screen('FillRect', win, color3, [start_coord+compChoice*width_coeff y_coord1 start_coord+Sub_ch*width_coeff y_coord2]) %regret          
-            disp_cursor(Sub_ch, color, w, l)
-            disp_cursor(compChoice, grey, wo, lo)
+            disp_cursor(Sub_ch, color, colorf, w, l)
+            disp_cursor(compChoice, grey, black, wo, lo)
         elseif (conditions{j}(i) == 2 && humanWin == 0) %SECONDA PUNTATA loss
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
             DrawFormattedText(win,'Hai perso!','center',450,white); 
             
             Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);
-            disp_cursor(Sub_ch, color, w, l)
+            disp_cursor(Sub_ch, color, colorf, w, l)
         elseif (conditions{j}(i) == 3 && humanWin == 1) %PUNTATA VINCENTE win
             DrawFormattedText(win,num2str(Sub_ch),1110,900,white);
             Screen('TextSize',win, 48);
@@ -456,7 +464,7 @@ for j=1:nrRuns
             
             Screen('FillRect', win, white, [start_coord y_coord1 start_coord+Sub_ch*width_coeff y_coord2]);
             Screen('FillRect', win, color2, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+(greenValueSubj)*width_coeff y_coord2]);
-            disp_cursor(Sub_ch, color, w, l)
+            disp_cursor(Sub_ch, color, colorf, w, l)
         elseif (conditions{j}(i) == 3 && humanWin == 0) %PUNTATA VINCENTE loss
             DrawFormattedText(win,num2str(compChoice),1110,900,white);
             Screen('TextSize',win, 48);
@@ -466,12 +474,12 @@ for j=1:nrRuns
                 Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+Sub_ch*width_coeff y_coord2]); %loss
                 Screen('FillRect', win, color1, [start_coord+Sub_ch*width_coeff y_coord1 start_coord+compChoice*width_coeff y_coord2]); %loss
                 Screen('FillRect', win, color3, [start_coord+compChoice*width_coeff y_coord1 start_coord+greenValueSubj*width_coeff y_coord2]);%regret 
-                disp_cursor(Sub_ch, color, w, l)
+                disp_cursor(Sub_ch, color, colorf, w, l)
                 Screen('FillRect', win, grey, [start_coord+compChoice*width_coeff-7 y_coord1-10 start_coord+compChoice*width_coeff+7 y_coord2+10]);
             elseif greenValueSubj<=compChoice
                 Screen('FillRect', win, color1, [start_coord y_coord1 start_coord+compChoice(end)*width_coeff y_coord2]);
-                disp_cursor(Sub_ch, color, w, l)
-                disp_cursor(compChoice, grey, wo, lo)
+                disp_cursor(Sub_ch, color, colorf, w, l)
+                disp_cursor(compChoice, grey, black, wo, lo)
             end
         end
         time.start = GetSecs;
@@ -480,7 +488,7 @@ for j=1:nrRuns
         
         if Cfg.Screenshot==1
             imageArray = Screen('GetImage', win); % GetImage call. Alter the rect argument to change the location of the screen shot
-            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_Feedback.jpg']) % imwrite is a Matlab function
+            imwrite(imageArray, ['Screenshots\Trial' num2str(trialnb) '_5Feedback.jpg']) % imwrite is a Matlab function
         end
         
         [KeyNames, Keytimes] = WaitSecsKeylog(tFeedback, Cfg.run_mode, time.start, SerPort);
@@ -499,8 +507,8 @@ for j=1:nrRuns
         %% show fixation coss
         Jittime = Cfg.Fix_min + rand*(Cfg.Fix_max - Cfg.Fix_min); 
         time.start = GetSecs;
-        Screen('FillRect', win, white, vCrossRect);
-        Screen('FillRect', win, white, hCrossRect);
+        Screen('FillRect', win, grey, vCrossRect);
+        Screen('FillRect', win, grey, hCrossRect);
         Screen('Flip',win);
         [KeyNames, Keytimes] = WaitSecsKeylog(Jittime, Cfg.run_mode, time.start, SerPort);
         time.end = GetSecs;
@@ -579,28 +587,30 @@ Screen('CloseAll');
 
 %% display functions
     function disp_only_white_values
-        pos_horz = [1000 1100 1200 1300 1400];
+        pos_horz = [900 1000 1100 1200 1300];
         Screen('TextSize',win, 48);
         DrawFormattedText(win,condname{conditions{j}(i)},'center',200,white);
         Screen('TextSize',win, 22);
         DrawFormattedText(win,condmsg{conditions{j}(i)},'center',900,white);
-        DrawFormattedText(win,'Possibili valori oggetto:',450,450,white)
+        DrawFormattedText(win,'valori:',600,450,white)
         for tt=1:5
-            DrawFormattedText(win, num2str(permvalueObj(1,tt)),pos_horz(tt),450,white)
+            DrawFormattedText(win, num2str(permvalueObj(1,tt)),pos_horz(tt),450,grey)
         end
     end
 
     function disp_green_value
-        pos_horz = [1000 1100 1200 1300 1400];
+        pos_horz = [900 1000 1100 1200 1300];
         Screen('TextSize',win, 48);
         DrawFormattedText(win,condname{conditions{j}(i)},'center',200,white);
         Screen('TextSize',win, 22);
         DrawFormattedText(win,condmsg{conditions{j}(i)},'center',900,white);
-        DrawFormattedText(win,'Possibili valori oggetto:',450,450,white)
+        DrawFormattedText(win,'valori:',600,450,white)
         for tt=1:5
-            DrawFormattedText(win, num2str(permvalueObj(1,tt)),pos_horz(tt),450,white)
+            DrawFormattedText(win, num2str(permvalueObj(1,tt)),pos_horz(tt),450,grey)
         end
-        DrawFormattedText(win, num2str(greenValueSubj),pos_horz(greenValueSubj == permvalueObj),450,green);
+        Screen('TextStyle',win, 1);
+        DrawFormattedText(win, num2str(greenValueSubj),pos_horz(greenValueSubj == permvalueObj),450,white);
+        Screen('TextStyle',win, 0);
     end
 
     function disp_bars
@@ -627,16 +637,16 @@ Screen('CloseAll');
         end
     end
 
-    function disp_cursor(horiz_pos, col, w, l)
+    function disp_cursor(horiz_pos, col, col2, w, l)
         Screen('FillRect', win, col, [start_coord+horiz_pos*width_coeff-w y_coord1-l start_coord+horiz_pos*width_coeff+w y_coord2+l]);
-        Screen('FrameRect', win, black, [start_coord+horiz_pos*width_coeff-w-1 y_coord1-l-1 start_coord+horiz_pos*width_coeff+w+1 y_coord2+l+1]);
+        Screen('FrameRect', win, col2, [start_coord+horiz_pos*width_coeff-w-1 y_coord1-l-1 start_coord+horiz_pos*width_coeff+w+1 y_coord2+l+1]);
     end
     
     function disp_barswithcursor
         disp_green_value;
         disp_bars;
         disp_ticks;
-        disp_cursor(survivingChoices(pos), color, w, l);
+        disp_cursor(survivingChoices(pos), color, colorf, w, l);
         time.start = GetSecs;
         Screen('Flip',win);
         time.end = GetSecs;
